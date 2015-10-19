@@ -24,6 +24,7 @@
 
 package com.redspace.smartqueue;
 
+import com.redspace.smartqueue.impl.SystemOutLogger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +35,8 @@ import java.util.Random;
 
 @RunWith(JUnit4.class)
 public class TestSmartQueue {
+
+    private final SmartQueueLogger logger = new SystemOutLogger();
 
     private enum EventType {
         A, B, C, D
@@ -52,8 +55,7 @@ public class TestSmartQueue {
 
     @Before
     public void setUp() {
-        smartQueue = new SmartQueue<>(eventQueueProcessor);
-        smartQueue.setDebugEnabled(true);
+        smartQueue = SmartQueue.create(eventQueueProcessor, logger);
     }
 
     /**

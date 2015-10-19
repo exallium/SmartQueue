@@ -24,37 +24,19 @@
 
 package com.redspace.smartqueue;
 
-import java.lang.ref.WeakReference;
+public abstract class SmartQueueLogger {
 
-final class SmartQueueWorker<E extends Enum, D> extends Thread {
+    public abstract void critical(String message, Throwable t);
+    public abstract void error(String message, Throwable t);
+    public abstract void warn(String message, Throwable t);
+    public abstract void info(String message, Throwable t);
+    public abstract void debug(String message, Throwable t);
+    public abstract void verbose(String message, Throwable t);
 
-    private WeakReference<SmartQueue<E, D>> weakSmartQueue = new WeakReference<>(null);
-    private WeakReference<SmartQueueProcessor<E, D>> weakProcessor = new WeakReference<>(null);
-
-    public SmartQueueWorker(SmartQueueProcessor<E, D> processor) {
-        this.weakProcessor = new WeakReference<>(processor);
-    }
-
-    void setQueue(SmartQueue<E, D> queue) {
-        weakSmartQueue = new WeakReference<>(queue);
-    }
-
-    @Override
-    public void run() {
-        while (true) {
-            SmartQueue<E, D> smartQueue = weakSmartQueue.get();
-            SmartQueueProcessor<E, D> smartQueueProcessor = weakProcessor.get();
-            if (smartQueue == null || smartQueueProcessor == null) {
-                return;
-            }
-
-            SmartQueueRecord<E, D> record;
-            while ((record = smartQueue.remove()) != null) {
-                smartQueue.getLogger().debug(record.toString());
-                smartQueueProcessor.process(record.getEvent(), record.getData());
-            }
-
-            smartQueue.onWorkerDone();
-        }
-    }
+    public final void critical(String message) { critical(message, null); }
+    public final void error(String message) { error(message, null); }
+    public final void warn(String message) { warn(message, null); }
+    public final void info(String message) { info(message, null); }
+    public final void debug(String message) { debug(message, null); }
+    public final void verbose(String message) { verbose(message, null); }
 }

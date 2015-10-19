@@ -48,15 +48,27 @@ public class SmartQueue<E extends Enum, D> {
 
     private final Set<Class> dependencies = new TreeSet<>();
 
-    private boolean isDebug = false;
+    private final WeakReference<SmartQueueLogger> weakLogger;
+
+    private SmartQueue(SmartQueueProcessor<E, D> processor, SmartQueueLogger logger) {
+        weakLogger = new WeakReference<>(logger);
+        smartQueueWorker = new SmartQueueWorker<>(processor);
+    }
 
     /**
      * Creates a SmartQueue instance.  Sets up and starts Worker thread.
      * @param processor "Where" events will go when they are dequeued, owned by caller.
      */
-    public SmartQueue(SmartQueueProcessor<E, D> processor) {
-        smartQueueWorker = new SmartQueueWorker<>(this, processor);
-        smartQueueWorker.start();
+    public static <E extends Enum, D> SmartQueue<E, D> create(SmartQueueProcessor<E, D> processor) {
+        return create(processor, EMPTY_LOGGER);
+    }
+
+    public static <E extends Enum, D> SmartQueue<E, D> create(SmartQueueProcessor<E, D> processor,
+                                                              SmartQueueLogger logger) {
+        SmartQueue<E, D> smartQueue = new SmartQueue<>(processor, logger);
+        smartQueue.smartQueueWorker.setQueue(smartQueue);
+        smartQueue.smartQueueWorker.start();
+        return smartQueue;
     }
 
     /**
@@ -75,19 +87,8 @@ public class SmartQueue<E extends Enum, D> {
         dependencies.remove(klass);
     }
 
-    /**
-     * @return true if we are in debug mode
-     */
-    public boolean isDebug() {
-        return isDebug;
-    }
-
-    /**
-     * Enables logging of processed events
-     * @param isDebug Whether or not to enable debugging
-     */
-    public void setDebugEnabled(boolean isDebug) {
-        this.isDebug = isDebug;
+    SmartQueueLogger getLogger() {
+        return weakLogger.get();
     }
 
     /**
@@ -137,9 +138,7 @@ public class SmartQueue<E extends Enum, D> {
                     smartQueueWorker.wait();
                 }
                 catch (InterruptedException e) {
-                    if (isDebug) {
-                        e.printStackTrace();
-                    }
+                    getLogger().error("Thread was interrupted during wait", e);
                 }
             }
         }
@@ -258,4 +257,36 @@ public class SmartQueue<E extends Enum, D> {
         }
     }
 
+    private static final SmartQueueLogger EMPTY_LOGGER = new SmartQueueLogger() {
+
+        @Override
+        public void critical(String message, Throwable t) {
+
+        }
+
+        @Override
+        public void error(String message, Throwable t) {
+
+        }
+
+        @Override
+        public void warn(String message, Throwable t) {
+
+        }
+
+        @Override
+        public void info(String message, Throwable t) {
+
+        }
+
+        @Override
+        public void debug(String message, Throwable t) {
+
+        }
+
+        @Override
+        public void verbose(String message, Throwable t) {
+
+        }
+    };
 }

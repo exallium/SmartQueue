@@ -22,39 +22,51 @@
  * THE SOFTWARE.
  */
 
-package com.redspace.smartqueue;
+package com.redspace.smartqueue.impl;
 
-import java.lang.ref.WeakReference;
+import com.redspace.smartqueue.SmartQueueLogger;
 
-final class SmartQueueWorker<E extends Enum, D> extends Thread {
+public class SystemOutLogger extends SmartQueueLogger {
 
-    private WeakReference<SmartQueue<E, D>> weakSmartQueue = new WeakReference<>(null);
-    private WeakReference<SmartQueueProcessor<E, D>> weakProcessor = new WeakReference<>(null);
-
-    public SmartQueueWorker(SmartQueueProcessor<E, D> processor) {
-        this.weakProcessor = new WeakReference<>(processor);
-    }
-
-    void setQueue(SmartQueue<E, D> queue) {
-        weakSmartQueue = new WeakReference<>(queue);
+    private void printStackTrace(Throwable t) {
+        if (t != null) {
+            t.printStackTrace();
+        }
     }
 
     @Override
-    public void run() {
-        while (true) {
-            SmartQueue<E, D> smartQueue = weakSmartQueue.get();
-            SmartQueueProcessor<E, D> smartQueueProcessor = weakProcessor.get();
-            if (smartQueue == null || smartQueueProcessor == null) {
-                return;
-            }
+    public void critical(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
+    }
 
-            SmartQueueRecord<E, D> record;
-            while ((record = smartQueue.remove()) != null) {
-                smartQueue.getLogger().debug(record.toString());
-                smartQueueProcessor.process(record.getEvent(), record.getData());
-            }
+    @Override
+    public void error(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
+    }
 
-            smartQueue.onWorkerDone();
-        }
+    @Override
+    public void warn(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
+    }
+
+    @Override
+    public void info(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
+    }
+
+    @Override
+    public void debug(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
+    }
+
+    @Override
+    public void verbose(String message, Throwable t) {
+        System.out.println(message);
+        printStackTrace(t);
     }
 }
