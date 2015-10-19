@@ -76,6 +76,7 @@ public class SmartQueue<E extends Enum, D> {
      * @param klass The class that can be depended on.
      */
     public synchronized void addDependency(Class klass) {
+        getLogger().verbose(String.format("Adding Dependency: %s", klass.getSimpleName()));
         dependencies.add(klass);
     }
 
@@ -84,6 +85,7 @@ public class SmartQueue<E extends Enum, D> {
      * @param klass The class that can no longer be depended on.
      */
     public synchronized void removeDependency(Class klass) {
+        getLogger().verbose(String.format("Removing Dependency: %s", klass.getSimpleName()));
         dependencies.remove(klass);
     }
 
@@ -102,6 +104,7 @@ public class SmartQueue<E extends Enum, D> {
     }
 
     private void add(SmartQueueRecord<E, D> record) {
+        getLogger().verbose("add()");
         synchronized (smartQueueWorker) {
             delegate.add(record);
             smartQueueWorker.notify();
@@ -110,6 +113,7 @@ public class SmartQueue<E extends Enum, D> {
 
     SmartQueueRecord<E, D> remove() {
 
+        getLogger().verbose("remove()");
         if (smartQueueWorker.getId() != Thread.currentThread().getId()) {
             throw new IllegalAccessError("Only the Worker Thread can dequeue objects");
         }
@@ -124,7 +128,7 @@ public class SmartQueue<E extends Enum, D> {
         }
 
         if (isRecordValid(removed) && !shouldDefer(removed)) {
-            enqueueDefered(removed);
+            enqueueDeferred(removed);
             return removed;
         }
 
@@ -132,6 +136,7 @@ public class SmartQueue<E extends Enum, D> {
     }
 
     void onWorkerDone() {
+        getLogger().verbose("onWorkerDone()");
         synchronized (smartQueueWorker) {
             if (delegate.isEmpty()) {
                 try {
@@ -144,11 +149,12 @@ public class SmartQueue<E extends Enum, D> {
         }
     }
 
-    private void enqueueDefered(SmartQueueRecord<E, D> record) {
+    private void enqueueDeferred(SmartQueueRecord<E, D> record) {
         E event = record.getEvent();
         seenEvents.add(event);
 
         if (deferedRecords.containsKey(event)) {
+            getLogger().verbose(String.format("Enqueuing Deferred Events for %s", event.name()));
             Queue<SmartQueueRecord<E, D>> queue = deferedRecords.get(event);
             delegate.addAll(queue);
             deferedRecords.remove(event);
@@ -161,13 +167,18 @@ public class SmartQueue<E extends Enum, D> {
         if (dependency != null
                 && !dependencies.contains(dependency)
                 && (defer == null || deferedRecords.containsKey(defer))) {
+            getLogger().info(String.format("Removing Invalid Record: %s", record.toString()));
             return false;
         }
 
         long creationDate = record.getCreatedAt();
         long lifespan = record.getLifespan();
         long now = System.currentTimeMillis();
-        return !(lifespan != 0 && lifespan < now - creationDate);
+        boolean isValid = !(lifespan != 0 && lifespan < now - creationDate);
+        if (!isValid) {
+            getLogger().info(String.format("Removing Invalid Record: %s", record.toString()));
+        }
+        return isValid;
 
     }
 
@@ -183,6 +194,7 @@ public class SmartQueue<E extends Enum, D> {
 
     private void defer(SmartQueueRecord<E, D> record) {
         E deferType = record.getDeferUntil();
+        getLogger().verbose(String.format("Deferring record until event %s is seen.", deferType.name()));
         Queue<SmartQueueRecord<E, D>> deferQueue = deferedRecords.get(deferType);
         if (deferQueue == null) {
             deferQueue = new PriorityBlockingQueue<>();

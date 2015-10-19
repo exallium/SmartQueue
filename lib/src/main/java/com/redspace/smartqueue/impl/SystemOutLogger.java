@@ -34,39 +34,38 @@ public class SystemOutLogger extends SmartQueueLogger {
         }
     }
 
-    @Override
-    public void critical(String message, Throwable t) {
+    private void printLog(String message, Throwable t) {
         System.out.println(message);
         printStackTrace(t);
+    }
+
+    @Override
+    public void critical(String message, Throwable t) {
+        printLog(message, t);
     }
 
     @Override
     public void error(String message, Throwable t) {
-        System.out.println(message);
-        printStackTrace(t);
+        printLog(message, t);
     }
 
     @Override
     public void warn(String message, Throwable t) {
-        System.out.println(message);
-        printStackTrace(t);
+        printLog(message, t);
     }
 
     @Override
     public void info(String message, Throwable t) {
-        System.out.println(message);
-        printStackTrace(t);
+        printLog(message, t);
     }
 
     @Override
     public void debug(String message, Throwable t) {
-        System.out.println(message);
-        printStackTrace(t);
+        printLog(message, t);
     }
 
     @Override
     public void verbose(String message, Throwable t) {
-        System.out.println(message);
-        printStackTrace(t);
+        printLog(message, t);
     }
 }
