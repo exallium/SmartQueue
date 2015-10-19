@@ -25,7 +25,11 @@
 package com.redspace.smartqueue;
 
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
 /**
