@@ -68,6 +68,7 @@ public class SmartQueue<E extends Enum, D> {
         SmartQueue<E, D> smartQueue = new SmartQueue<>(processor, logger);
         smartQueue.smartQueueWorker.setQueue(smartQueue);
         smartQueue.smartQueueWorker.start();
+        smartQueue.getLogger().info("SmartQueue Created");
         return smartQueue;
     }
 
@@ -76,7 +77,7 @@ public class SmartQueue<E extends Enum, D> {
      * @param klass The class that can be depended on.
      */
     public synchronized void addDependency(Class klass) {
-        getLogger().verbose(String.format("Adding Dependency: %s", klass.getSimpleName()));
+        getLogger().debug(String.format("Adding Dependency: %s", klass.getSimpleName()));
         dependencies.add(klass);
     }
 
@@ -85,7 +86,7 @@ public class SmartQueue<E extends Enum, D> {
      * @param klass The class that can no longer be depended on.
      */
     public synchronized void removeDependency(Class klass) {
-        getLogger().verbose(String.format("Removing Dependency: %s", klass.getSimpleName()));
+        getLogger().debug(String.format("Removing Dependency: %s", klass.getSimpleName()));
         dependencies.remove(klass);
     }
 
@@ -100,11 +101,12 @@ public class SmartQueue<E extends Enum, D> {
      * @return A new builder object, which you can populate with extra optional data.
      */
     public RecordBuilder<E, D> createRecord(E event, D data) {
+        getLogger().debug(String.format("Create RecordBuilder for Event %s and Data %s", event, data));
         return new RecordBuilder<>(event, data, this);
     }
 
     private void add(SmartQueueRecord<E, D> record) {
-        getLogger().verbose("add()");
+        getLogger().debug(String.format("add(%s)", record.toString()));
         synchronized (smartQueueWorker) {
             delegate.add(record);
             smartQueueWorker.notify();
@@ -112,8 +114,6 @@ public class SmartQueue<E extends Enum, D> {
     }
 
     SmartQueueRecord<E, D> remove() {
-
-        getLogger().verbose("remove()");
         if (smartQueueWorker.getId() != Thread.currentThread().getId()) {
             throw new IllegalAccessError("Only the Worker Thread can dequeue objects");
         }
@@ -123,23 +123,27 @@ public class SmartQueue<E extends Enum, D> {
             if (!delegate.isEmpty()) {
                 removed = delegate.remove();
             } else {
+                getLogger().debug("remove() -> null");
                 return null;
             }
         }
 
         if (isRecordValid(removed) && !shouldDefer(removed)) {
             enqueueDeferred(removed);
+            getLogger().debug(String.format("remove() -> %s", removed));
             return removed;
         }
 
+        getLogger().debug("remove() -> null");
         return null;
     }
 
     void onWorkerDone() {
-        getLogger().verbose("onWorkerDone()");
+        getLogger().debug("onWorkerDone()");
         synchronized (smartQueueWorker) {
             if (delegate.isEmpty()) {
                 try {
+                    getLogger().verbose("Awaiting More Events");
                     smartQueueWorker.wait();
                 }
                 catch (InterruptedException e) {
@@ -154,8 +158,8 @@ public class SmartQueue<E extends Enum, D> {
         seenEvents.add(event);
 
         if (deferedRecords.containsKey(event)) {
-            getLogger().verbose(String.format("Enqueuing Deferred Events for %s", event.name()));
             Queue<SmartQueueRecord<E, D>> queue = deferedRecords.get(event);
+            getLogger().verbose(String.format("Enqueuing %d Deferred Events for %s", queue.size(), event.name()));
             delegate.addAll(queue);
             deferedRecords.remove(event);
         }

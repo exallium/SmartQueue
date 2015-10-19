@@ -50,7 +50,7 @@ final class SmartQueueWorker<E extends Enum, D> extends Thread {
 
             SmartQueueRecord<E, D> record;
             while ((record = smartQueue.remove()) != null) {
-                smartQueue.getLogger().debug(record.toString());
+                smartQueue.getLogger().debug(String.format("Worker Processing %s", record.toString()));
                 smartQueueProcessor.process(record.getEvent(), record.getData());
             }
 

@@ -48,7 +48,7 @@ public class TestSmartQueue {
     private final SmartQueueProcessor<EventType, String> eventQueueProcessor = new SmartQueueProcessor<EventType, String>() {
         @Override
         public void process(EventType event, String data) {
-            System.out.println(data);
+            System.out.println(String.format("Event: %s, Data: %s", event, data));
             count++;
         }
     };
