@@ -108,6 +108,11 @@ public class SmartQueue<E extends Enum, D> {
     }
 
     SmartQueueRecord<E, D> remove() {
+
+        if (smartQueueWorker.getId() != Thread.currentThread().getId()) {
+            throw new IllegalAccessError("Only the Worker Thread can dequeue objects");
+        }
+
         final SmartQueueRecord<E, D> removed;
         synchronized (smartQueueWorker) {
             if (!delegate.isEmpty()) {
