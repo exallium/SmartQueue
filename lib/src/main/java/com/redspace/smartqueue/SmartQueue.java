@@ -25,10 +25,7 @@
 package com.redspace.smartqueue;
 
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.PriorityBlockingQueue;
 
 /**
@@ -39,10 +36,10 @@ import java.util.concurrent.PriorityBlockingQueue;
  */
 public class SmartQueue<E extends Enum, D> {
 
-    private final PriorityBlockingQueue<SmartQueueRecord<E, D>> delegate = new PriorityBlockingQueue<>();
+    private final Queue<SmartQueueRecord<E, D>> delegate = new PriorityBlockingQueue<>();
 
     private final Set<E> seenEvents = new TreeSet<>();
-    private final Map<E, PriorityBlockingQueue<SmartQueueRecord<E, D>>> deferedRecords = new HashMap<>();
+    private final Map<E, Queue<SmartQueueRecord<E, D>>> deferedRecords = new HashMap<>();
     private final SmartQueueWorker<E, D> smartQueueWorker;
 
     private final Set<Class> dependencies = new TreeSet<>();
@@ -95,24 +92,48 @@ public class SmartQueue<E extends Enum, D> {
      * @param data  Data to queue
      * @return A new builder object, which you can populate with extra optional data.
      */
-    public synchronized RecordBuilder<E, D> createRecord(E event, D data) {
+    public RecordBuilder<E, D> createRecord(E event, D data) {
         return new RecordBuilder<>(event, data, this);
     }
 
-    private synchronized void add(SmartQueueRecord<E, D> record) {
-        delegate.add(record);
-        smartQueueWorker.recordsAvailable();
+    private void add(SmartQueueRecord<E, D> record) {
+        synchronized (smartQueueWorker) {
+            delegate.add(record);
+            smartQueueWorker.notify();
+        }
     }
 
-    synchronized SmartQueueRecord<E, D> remove() {
-        if (!delegate.isEmpty()) {
-            SmartQueueRecord<E, D> removed = delegate.remove();
-            if (isRecordValid(removed) && !shouldDefer(removed)) {
-                enqueueDefered(removed);
-                return removed;
+    SmartQueueRecord<E, D> remove() {
+        final SmartQueueRecord<E, D> removed;
+        synchronized (smartQueueWorker) {
+            if (!delegate.isEmpty()) {
+                removed = delegate.remove();
+            } else {
+                return null;
             }
         }
+
+        if (isRecordValid(removed) && !shouldDefer(removed)) {
+            enqueueDefered(removed);
+            return removed;
+        }
+
         return null;
+    }
+
+    void onWorkerDone() {
+        synchronized (smartQueueWorker) {
+            if (delegate.isEmpty()) {
+                try {
+                    smartQueueWorker.wait();
+                }
+                catch (InterruptedException e) {
+                    if (isDebug) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 
     private void enqueueDefered(SmartQueueRecord<E, D> record) {
@@ -120,7 +141,7 @@ public class SmartQueue<E extends Enum, D> {
         seenEvents.add(event);
 
         if (deferedRecords.containsKey(event)) {
-            PriorityBlockingQueue<SmartQueueRecord<E, D>> queue = deferedRecords.get(event);
+            Queue<SmartQueueRecord<E, D>> queue = deferedRecords.get(event);
             delegate.addAll(queue);
             deferedRecords.remove(event);
         }
@@ -154,7 +175,7 @@ public class SmartQueue<E extends Enum, D> {
 
     private void defer(SmartQueueRecord<E, D> record) {
         E deferType = record.getDeferUntil();
-        PriorityBlockingQueue<SmartQueueRecord<E, D>> deferQueue = deferedRecords.get(deferType);
+        Queue<SmartQueueRecord<E, D>> deferQueue = deferedRecords.get(deferType);
         if (deferQueue == null) {
             deferQueue = new PriorityBlockingQueue<>();
             deferedRecords.put(deferType, deferQueue);

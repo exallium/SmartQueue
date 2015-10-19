@@ -30,7 +30,6 @@ final class SmartQueueWorker<E extends Enum, D> extends Thread {
 
     private WeakReference<SmartQueue<E, D>> weakSmartQueue = new WeakReference<>(null);
     private WeakReference<SmartQueueProcessor<E, D>> weakProcessor = new WeakReference<>(null);
-    private boolean isContentAvailable = false;
 
     public SmartQueueWorker(SmartQueue<E, D> smartQueue, SmartQueueProcessor<E, D> processor) {
         this.weakSmartQueue = new WeakReference<>(smartQueue);
@@ -40,7 +39,6 @@ final class SmartQueueWorker<E extends Enum, D> extends Thread {
     @Override
     public void run() {
         while (true) {
-            synchronized (this) { isContentAvailable = false; }
             SmartQueue<E, D> smartQueue = weakSmartQueue.get();
             SmartQueueProcessor<E, D> smartQueueProcessor = weakProcessor.get();
             if (smartQueue == null || smartQueueProcessor == null) {
@@ -57,22 +55,7 @@ final class SmartQueueWorker<E extends Enum, D> extends Thread {
                 smartQueueProcessor.process(record.getEvent(), record.getData());
             }
 
-            synchronized (this) {
-                try {
-                    if (!isContentAvailable) {
-                        wait();
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    void recordsAvailable() {
-        synchronized (this) {
-            isContentAvailable = true;
-            notify();
+            smartQueue.onWorkerDone();
         }
     }
 }
