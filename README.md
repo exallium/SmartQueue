@@ -11,6 +11,7 @@ for smaller, more confined tasks. (Though it does scale just fine).
 * Class based dependencies
 * Automatic pruning based on class dependencies and timeout
 * More lightweight than other solutions, better for one-off solutions.
+* Built in, customizable logging.
 
 ### The Record and Builder
 
