@@ -57,3 +57,11 @@ and will be revalidated.
 You can defer events until a certain other event happens via the Builder.  If you do this, whenever that event is
 processed, SmartQueue will push it out to a queue just for your defer type.  Once your defer type happens (you push an
 event with the type and it gets processed), the defered events will be pushed back into your queue and resume operations.
+
+### Logging
+
+SmartQueue has built in optional logging.  You can extend the ```SmartQueueLogger``` abstract class, and pass it as an
+optional parameter to ```SmartQueue.create(/* ... */)```.  This will pipe all internal logging into that abstract class,
+and you can decide what to do with it from there.  Five levels of logging are currently supported, but not all are used.
+By default, SmartQueue will use an empty implementation.  I've included SystemOutLogger as an available option for
+testing purposes, as well as an easy logger to use before you implement your own.
