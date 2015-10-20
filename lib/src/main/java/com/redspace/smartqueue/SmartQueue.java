@@ -209,8 +209,8 @@ public class SmartQueue<E extends Enum, D> {
 
     /**
      * Builds a SmartQueueRecord and allows insertion into this Queue
-     * @param <E>
-     * @param <D>
+     * @param <E> Event Enumeration Type
+     * @param <D> Data type
      */
     public static class RecordBuilder<E extends Enum, D> {
 
